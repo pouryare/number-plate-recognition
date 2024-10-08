@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Plate Detection</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500" rel="stylesheet">
+    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            max-width: 600px;
+            width: 100%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .bento-box {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .card {
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+            padding: 1rem;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        #fileNameDisplay {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+        }
+        #previewContainer {
+            position: relative;
+            margin-top: 1rem;
+        }
+        #previewImage {
+            max-width: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+        #resultCard {
+            display: none;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="mdc-typography--headline4">Number Plate Detection</h1>
+        </div>
+        <div class="bento-box">
+            <div class="card">
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                <div class="button-container">
+                    <button id="chooseFileBtn" class="mdc-button mdc-button--raised">
+                        <span class="mdc-button__label">Choose File</span>
+                    </button>
+                    <button id="uploadBtn" class="mdc-button mdc-button--raised" style="display: none;">
+                        <span class="mdc-button__label">Upload and Analyze</span>
+                    </button>
+                </div>
+                <div id="fileNameDisplay"></div>
+                <div id="previewContainer">
+                    <img id="previewImage" src="" alt="Preview" style="display: none;">
+                </div>
+                <div class="loader" id="loader"></div>
+            </div>
+            <div id="resultCard" class="card">
+                <h2 class="mdc-typography--headline6">Result</h2>
+                <p id="resultText"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mdc.ripple.MDCRipple.attachTo(document.querySelector('.mdc-button'));
+
+        const fileInput = document.getElementById('fileInput');
+        const chooseFileBtn = document.getElementById('chooseFileBtn');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const previewImage = document.getElementById('previewImage');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const resultCard = document.getElementById('resultCard');
+        const resultText = document.getElementById('resultText');
+        const loader = document.getElementById('loader');
+
+        chooseFileBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileNameDisplay.textContent = file.name;
+                previewImage.src = URL.createObjectURL(file);
+                previewImage.style.display = 'block';
+                uploadBtn.style.display = 'inline-flex';
+            }
+        });
+
+        uploadBtn.addEventListener('click', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                loader.style.display = 'block';
+                uploadBtn.disabled = true;
+
+                fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loader.style.display = 'none';
+                    uploadBtn.disabled = false;
+                    resultCard.style.display = 'block';
+
+                    const prediction = data.prediction;
+                    const confidence = prediction.confidence * 100;
+                    const color = confidence > 50 ? 'green' : 'red';
+
+                    resultText.innerHTML = `
+                        <p>Confidence: <span style="color: ${color};">${confidence.toFixed(2)}%</span></p>
+                        <p>Bounding Box:</p>
+                        <ul>
+                            <li>X-min: ${prediction.xmin}</li>
+                            <li>X-max: ${prediction.xmax}</li>
+                            <li>Y-min: ${prediction.ymin}</li>
+                            <li>Y-max: ${prediction.ymax}</li>
+                        </ul>
+                    `;
+
+                    // Update the preview image with the processed image from the server
+                    previewImage.src = `data:image/jpeg;base64,${data.image}`;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    loader.style.display = 'none';
+                    uploadBtn.disabled = false;
+                    resultText.textContent = 'An error occurred during processing.';
+                    resultCard.style.display = 'block';
+                });
+            }
+        });
+    </script>
+</body>
+</html>
