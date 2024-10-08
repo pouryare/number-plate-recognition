@@ -11,6 +11,8 @@ This project implements a deep learning model to detect and recognize number pla
 - `app/templates/index.html`: HTML template for the web interface
 - `Dockerfile`: Instructions for building the Docker image
 
+**Note:** The trained model file `Number-Plate-Recognition.keras` is not included in this repository due to GitHub's file size limitations. You will need to generate this file by running the Jupyter notebook, or download it from an external source if provided.
+
 ## Features
 
 - Data loading and preprocessing from Kaggle dataset
@@ -60,7 +62,7 @@ This project implements a deep learning model to detect and recognize number pla
    - Preprocess the images
    - Create and train the number plate detection model
    - Evaluate the model and display performance metrics
-   - Save the trained model
+   - Save the trained model as `Number-Plate-Recognition.keras`
 
 ### Running the Web Application
 
@@ -73,17 +75,19 @@ To run the Flask web application locally:
    pip install -r requirements.txt
    ```
 
-2. Navigate to the `app` folder:
+2. Place the `Number-Plate-Recognition.keras` file in the `app` directory.
+
+3. Navigate to the `app` folder:
    ```
    cd app
    ```
 
-3. Run the Flask app:
+4. Run the Flask app:
    ```
    python app.py
    ```
 
-4. Open a web browser and go to `http://localhost:8080` to use the prediction interface.
+5. Open a web browser and go to `http://localhost:8080` to use the prediction interface.
 
 #### Docker Deployment
 
